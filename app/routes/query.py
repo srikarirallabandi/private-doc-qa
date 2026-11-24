@@ -3,7 +3,7 @@
 from fastapi import APIRouter, HTTPException
 
 from app.schemas import QueryRequest, QueryResponse
-from app.services.mirror_etf import query_document
+from app.services.mirror_sdk_service import query_document
 from app.routes.upload import get_document
 
 router = APIRouter()
@@ -11,14 +11,6 @@ router = APIRouter()
 
 @router.post("/query", response_model=QueryResponse, summary="Query a document")
 async def query(body: QueryRequest):
-    """Ask a natural-language question about an uploaded document.
-
-    Mirror ETF processes the prompt and document context with fully homomorphic
-    encryption — the model computes on ciphertext and returns a signed run
-    receipt alongside the answer.
-
-    Requires a valid `doc_id` from **POST /upload**.
-    """
     doc_text = get_document(body.doc_id)
     if doc_text is None:
         raise HTTPException(
@@ -26,11 +18,15 @@ async def query(body: QueryRequest):
             detail=f"Document '{body.doc_id}' not found. Upload it first via POST /upload.",
         )
 
-    answer, receipt = await query_document(doc_text, body.question)
+    result = query_document(doc_text, body.question, model=body.model, runtime=body.runtime)
 
     return QueryResponse(
-        answer=answer,
+        answer=result["answer"],
         doc_id=body.doc_id,
         question=body.question,
-        receipt=receipt,
+        model=result["model"],
+        runtime=result["runtime"],
+        protection=result["protection"],
+        mirror_report=result["mirror_report"],
+        service_timing=result["service_timing"],
     )

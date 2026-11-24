@@ -1,191 +1,146 @@
-# 🔒 Private Document Q&A
+# Mirror SDK Document Q&A
 
-> Upload a PDF or plain-text file and ask questions about it.  
-> Every inference call is routed through **[Mirror ETF (Encrypted Token Factory)](https://mirrorsecurity.io/etf)** so your document content stays encrypted during inference — the model computes on ciphertext and returns a signed run receipt with every answer.
+A small FastAPI app that lets you upload a document and ask questions about it using the **Mirror SDK**.
 
----
+This version is adapted from a simple private document Q&A app and replaces the Mirror ETF OpenAI-compatible adapter with the native `mirror_sdk` client.
 
-## What this demonstrates
+## Features
 
-| Concept | Where it shows up |
-|---|---|
-| Mirror ETF as an OpenAI-compatible drop-in | `app/services/mirror_etf.py` — only `base_url` changes |
-| Signed run receipts | Every `/api/query` response includes a `receipt` field |
-| PDF + plain-text extraction | `app/services/document.py` using `pypdf` |
-| FastAPI file upload → in-memory store → Q&A flow | `app/routes/upload.py` + `app/routes/query.py` |
-| Single-page UI (no framework) | `frontend/index.html` |
-
----
+- Upload PDF and text documents
+- Ask questions grounded only in the uploaded document
+- Query via Mirror SDK chat completions
+- Choose `plain`, `protected`, or `sealed` runtime lanes
+- Run Mirror diagnostics from the UI or API
+- List available Mirror chat models when your tenant exposes routing
 
 ## Project structure
 
 ```
-private-doc-qa/
-├── main.py                    # FastAPI app — entry point
+mirror-doc-qa-sdk/
+├── main.py
 ├── requirements.txt
-├── .env.example               # Copy to .env and fill in your key
-├── .gitignore
-│
-├── app/
-│   ├── schemas.py             # Pydantic request/response models
-│   ├── routes/
-│   │   ├── upload.py          # POST /api/upload
-│   │   └── query.py           # POST /api/query
-│   └── services/
-│       ├── document.py        # PDF + plain-text extraction
-│       └── mirror_etf.py      # Mirror ETF OpenAI-compatible client
-│
+├── .env.example
+├── README.md
 ├── frontend/
-│   └── index.html             # Single-page UI
-│
+│   └── index.html
+├── app/
+│   ├── schemas.py
+│   ├── routes/
+│   │   ├── upload.py
+│   │   ├── query.py
+│   │   └── mirror.py
+│   └── services/
+│       ├── document.py
+│       └── mirror_sdk_service.py
 └── tests/
-    └── test_app.py            # Smoke tests (pytest)
 ```
 
----
+## Setup
 
-## Quickstart
-
-### 1. Clone and install dependencies
+### 1. Create a virtualenv and install app dependencies
 
 ```bash
-git clone https://github.com/<your-username>/private-doc-qa.git
-cd private-doc-qa
-
 python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
-
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Configure Mirror ETF
+### 2. Install Mirror SDK from your local bundle
+
+If your extracted SDK bundle is in `/path/to/mirror-sdk`:
+
+```bash
+pip install --find-links=/path/to/mirror-sdk mirror-sdk
+```
+
+Example using the bundle you shared after unzipping:
+
+```bash
+pip install --find-links=../mirror-sdk mirror-sdk
+```
+
+### 3. Download and extract your Mirror service credential
+
+From the Mirror platform UI:
+
+- **Credentials → Service Credentials → Add New → Download credentials**
+
+Then extract the downloaded bundle into a local secrets folder inside your project:
+
+```bash
+unzip ~/Downloads/<credential>-service-credential-bundle.zip -d .secrets
+export MIRROR_SERVICE_CREDENTIAL_FILE="$PWD/.secrets/mirror-service-credential/service-credential.json"
+```
+
+You can keep the `export` for the current shell session, or copy the resolved absolute path into `.env`.
+
+### 4. Configure environment
 
 ```bash
 cp .env.example .env
 ```
 
-Open `.env` and set:
+Set at minimum:
 
 ```env
-# Your Mirror ETF API key from https://platform.mirrorsecurity.io
-MIRROR_ETF_API_KEY=your-key-here
-
-# Local mode — Mirror ETF node running on your machine:
-MIRROR_ETF_BASE_URL=http://127.0.0.1:8790/v1
-
-# SaaS mode — Mirror's hosted platform:
-# MIRROR_ETF_BASE_URL=https://platform.mirrorsecurity.io/v1
-
-# Model available on your Mirror ETF node
-MIRROR_ETF_MODEL=gpt-4o
+MIRROR_SERVICE_CREDENTIAL_FILE=/absolute/path/to/service-credential.json
+MIRROR_BASE_URL=https://platform.mirrorsecurity.io
+MIRROR_DEFAULT_MODEL=claude-sonnet-4-6
+MAX_DOC_TOKENS=8000
 ```
 
-> **Local mode:** Download and run the Mirror ETF node from [mirrorsecurity.io/etf](https://mirrorsecurity.io/etf). The node starts on `http://127.0.0.1:8790` by default and routes inference through encrypted channels.
+Notes:
 
-### 3. Run the server
+- The native `mirror_sdk` client needs `MIRROR_BASE_URL` in addition to the service credential file.
+- For the hosted Mirror SDK flow, prefer the platform host root such as `https://platform.mirrorsecurity.io`, not the local ETF proxy URL.
+- If your environment uses legacy API-key auth instead of the service credential file, configure `MIRROR_BASE_URL` and `MIRROR_API_KEY` instead.
+
+## Run the app
 
 ```bash
 python main.py
 ```
 
-Then open **[http://localhost:8000](http://localhost:8000)** in your browser.
+Then open [http://localhost:8000](http://localhost:8000).
 
-The interactive API docs are at **[http://localhost:8000/api/docs](http://localhost:8000/api/docs)**.
+API docs are at [http://localhost:8000/api/docs](http://localhost:8000/api/docs).
 
----
-
-## API reference
+## API endpoints
 
 ### `POST /api/upload`
-
-Upload a document. Supported types: `.pdf`, `.txt`, `.md`, `.csv`, `.log`.
-
-**Request:** `multipart/form-data` with a `file` field.
-
-**Response:**
-```json
-{
-  "doc_id": "3f2a1b...",
-  "filename": "contract.pdf",
-  "char_count": 14823,
-  "message": "Document uploaded and ready to query."
-}
-```
-
----
+Upload a PDF or text document.
 
 ### `POST /api/query`
+Body:
 
-Ask a question about an uploaded document.
-
-**Request body:**
 ```json
 {
-  "doc_id": "3f2a1b...",
-  "question": "What are the termination clauses?"
+  "doc_id": "...",
+  "question": "What are the main conclusions?",
+  "model": "claude-sonnet-4-6",
+  "runtime": "protected"
 }
 ```
 
-**Response:**
-```json
-{
-  "answer": "Section 12 states that either party may terminate...",
-  "doc_id": "3f2a1b...",
-  "question": "What are the termination clauses?",
-  "receipt": {
-    "receipt_id": "rcpt_...",
-    "signed_at": "2026-11-18T10:23:45Z",
-    "model": "gpt-4o",
-    "encryption_lane": "fhe",
-    "raw": { ... }
-  }
-}
-```
+### `GET /api/mirror/diagnostics`
+Run `client.diagnostics.run()` and return the report.
 
-The `receipt` object is Mirror ETF's **signed run receipt** — a tamper-evident record that proves what the model processed, when, and under which encryption lane.
+### `GET /api/mirror/models`
+Return models from `client.routing.models.list()` when available.
 
----
+## Notes
 
-## Running the tests
+- This app currently uses simple **full-document prompting** with truncation.
+- For larger documents or production use, the next upgrade should be **chunking + retrieval**.
+- The app normalizes Mirror metadata into:
+  - `protection`
+  - `mirror_report`
+  - `service_timing`
 
-```bash
-pytest tests/ -v
-```
+## Suggested next improvements
 
-To run the live integration test (requires Mirror ETF to be running):
-
-```bash
-MIRROR_ETF_INTEGRATION=1 pytest tests/ -v
-```
-
----
-
-## How Mirror ETF integration works
-
-The entire integration lives in `app/services/mirror_etf.py`. The key difference from a plain OpenAI call is **one line**:
-
-```python
-from openai import AsyncOpenAI
-
-client = AsyncOpenAI(
-    api_key="your-mirror-etf-key",
-    base_url="http://127.0.0.1:8790/v1",   # ← this is all that changes
-)
-```
-
-From that point on, every `client.chat.completions.create(...)` call travels encrypted through Mirror ETF. The model never sees your plaintext document — it reasons on ciphertext — and each response includes a signed receipt.
-
----
-
-## Resources
-
-- [Mirror ETF product page](https://mirrorsecurity.io/etf)
-- [Mirror Security platform](https://mirrorsecurity.io/platform)
-- [Mirror ETF documentation](https://docs.mirrorsecurity.io)
-- [Mirror Security playground](https://mirrorsecurity.io/playground) — try FHE demos in the browser
-
----
-
-## License
-
-MIT
+1. Add streaming answers
+2. Add document chunking and retrieval
+3. Persist uploaded docs in a database or object store
+4. Add multi-document collections
+5. Add conversation history

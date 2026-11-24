@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Private Document Q&A — Mirror ETF</title>
+  <title>Mirror SDK Document Q&A</title>
   <style>
     :root {
       color-scheme: light;
@@ -18,13 +18,11 @@
       --success-border: #bbf7d0;
       --error-bg: #fef2f2;
       --error-border: #fecaca;
-      --receipt-bg: #f0f9ff;
-      --receipt-border: #bae6fd;
+      --info-bg: #f0f9ff;
+      --info-border: #bae6fd;
       --radius: 10px;
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: var(--bg);
@@ -35,387 +33,142 @@
       align-items: center;
       padding: 2rem 1rem 4rem;
     }
-
-    header {
-      text-align: center;
-      margin-bottom: 2.5rem;
-    }
-
-    header h1 {
-      font-size: 1.75rem;
-      font-weight: 700;
-      margin-bottom: 0.4rem;
-    }
-
-    header p {
-      color: var(--muted);
-      font-size: 0.95rem;
-    }
-
+    header { text-align: center; margin-bottom: 2rem; }
+    header h1 { font-size: 1.8rem; margin-bottom: 0.4rem; }
+    header p { color: var(--muted); }
     .badge {
-      display: inline-block;
-      background: #eff6ff;
-      color: var(--accent);
-      border: 1px solid #bfdbfe;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      padding: 2px 10px;
-      margin-top: 0.6rem;
+      display: inline-block; margin-top: .7rem; padding: 4px 10px; border-radius: 999px;
+      font-size: .75rem; font-weight: 600; background: #eff6ff; color: var(--accent); border: 1px solid #bfdbfe;
     }
-
     .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.75rem;
-      width: 100%;
-      max-width: 680px;
-      margin-bottom: 1.5rem;
-      box-shadow: 0 1px 4px rgba(0,0,0,.05);
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 1.5rem; width: 100%; max-width: 760px; margin-bottom: 1.25rem; box-shadow: 0 1px 4px rgba(0,0,0,.05);
     }
-
-    .card h2 {
-      font-size: 1rem;
-      font-weight: 600;
-      margin-bottom: 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .step-num {
-      background: var(--accent);
-      color: #fff;
-      border-radius: 50%;
-      width: 22px;
-      height: 22px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
+    h2 { font-size: 1rem; margin-bottom: 1rem; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
     .drop-zone {
-      border: 2px dashed var(--border);
-      border-radius: var(--radius);
-      padding: 2rem;
-      text-align: center;
-      cursor: pointer;
-      transition: border-color .2s, background .2s;
-      position: relative;
+      border: 2px dashed var(--border); border-radius: var(--radius); padding: 2rem; text-align: center;
+      cursor: pointer; transition: border-color .2s, background .2s; position: relative;
     }
-
-    .drop-zone:hover, .drop-zone.drag-over {
-      border-color: var(--accent);
-      background: #eff6ff;
-    }
-
-    .drop-zone input[type="file"] {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      cursor: pointer;
-    }
-
-    .drop-zone .icon { font-size: 2rem; margin-bottom: 0.5rem; }
-    .drop-zone p { color: var(--muted); font-size: 0.9rem; }
-    .drop-zone strong { color: var(--accent); }
-
+    .drop-zone:hover, .drop-zone.drag-over { border-color: var(--accent); background: #eff6ff; }
+    .drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .file-info, .alert, .answer-block { display: none; }
+    .file-info.show, .alert.show, .answer-block.show { display: block; }
     .file-info {
-      display: none;
-      align-items: center;
-      gap: 0.75rem;
-      margin-top: 1rem;
-      padding: 0.75rem 1rem;
-      background: var(--success-bg);
-      border: 1px solid var(--success-border);
-      border-radius: 8px;
-      font-size: 0.875rem;
+      margin-top: 1rem; padding: .75rem 1rem; background: var(--success-bg); border: 1px solid var(--success-border); border-radius: 8px;
+      font-size: .875rem;
     }
-
-    .file-info.show { display: flex; }
-
+    label { display: block; font-size: .875rem; font-weight: 600; margin-bottom: .4rem; }
+    select, textarea, input[type="text"] {
+      width: 100%; padding: .7rem .8rem; border: 1px solid var(--border); border-radius: 8px; font: inherit;
+      background: white;
+    }
+    textarea { min-height: 96px; resize: vertical; }
     button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.4rem;
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 0.6rem 1.2rem;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background .15s;
-      width: 100%;
-      margin-top: 1rem;
+      display: inline-flex; align-items: center; justify-content: center; width: 100%; margin-top: 1rem;
+      background: var(--accent); color: white; border: none; border-radius: 8px; padding: .7rem 1.1rem; font-weight: 600; cursor: pointer;
     }
-
     button:hover:not(:disabled) { background: var(--accent-hover); }
-    button:disabled { opacity: 0.55; cursor: not-allowed; }
-
-    .spinner {
-      width: 16px; height: 16px;
-      border: 2px solid rgba(255,255,255,0.4);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-      display: none;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    textarea {
-      width: 100%;
-      min-height: 90px;
-      padding: 0.75rem;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 0.95rem;
-      font-family: inherit;
-      resize: vertical;
-      transition: border-color .15s;
-    }
-
-    textarea:focus { outline: none; border-color: var(--accent); }
-
-    .alert {
-      padding: 0.85rem 1rem;
-      border-radius: 8px;
-      font-size: 0.875rem;
-      margin-top: 1rem;
-      display: none;
-    }
-
-    .alert.show { display: block; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    .alert { margin-top: 1rem; padding: .85rem 1rem; border-radius: 8px; font-size: .875rem; }
     .alert.error { background: var(--error-bg); border: 1px solid var(--error-border); color: #991b1b; }
     .alert.success { background: var(--success-bg); border: 1px solid var(--success-border); color: #166534; }
-
-    .answer-block {
-      display: none;
-      margin-top: 1.25rem;
-    }
-
-    .answer-block.show { display: block; }
-
-    .answer-text {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 1rem;
-      font-size: 0.95rem;
-      line-height: 1.6;
-      white-space: pre-wrap;
-    }
-
-    .receipt-block {
-      margin-top: 1rem;
-      background: var(--receipt-bg);
-      border: 1px solid var(--receipt-border);
-      border-radius: 8px;
-      padding: 0.85rem 1rem;
-    }
-
-    .receipt-block summary {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: #0369a1;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .receipt-block pre {
-      margin-top: 0.75rem;
-      font-size: 0.775rem;
-      line-height: 1.5;
-      overflow-x: auto;
-      color: #0c4a6e;
-    }
-
-    footer {
-      margin-top: auto;
-      padding-top: 2rem;
-      text-align: center;
-      font-size: 0.8rem;
-      color: var(--muted);
-    }
-
-    footer a { color: var(--accent); text-decoration: none; }
+    .info-box { background: var(--info-bg); border: 1px solid var(--info-border); border-radius: 8px; padding: .9rem 1rem; font-size: .875rem; }
+    .answer-text { margin-top: .8rem; background: #f9fafb; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; white-space: pre-wrap; line-height: 1.6; }
+    details { margin-top: .8rem; }
+    pre { overflow-x: auto; font-size: .78rem; line-height: 1.45; background: #f8fafc; border: 1px solid var(--border); padding: .9rem; border-radius: 8px; }
+    .muted { color: var(--muted); font-size: .85rem; }
   </style>
 </head>
 <body>
+  <header>
+    <h1>🪞 Mirror SDK Document Q&A</h1>
+    <p>Upload a document and query it through Mirror SDK with plain or protected runtime lanes.</p>
+    <span class="badge">FastAPI + Mirror SDK</span>
+  </header>
 
-<header>
-  <h1>🔒 Private Document Q&A</h1>
-  <p>Upload a document, ask questions — inference routed through Mirror ETF.</p>
-  <span class="badge">Powered by Mirror Encrypted Token Factory</span>
-</header>
-
-<!-- Step 1: Upload -->
-<div class="card">
-  <h2><span class="step-num">1</span> Upload your document</h2>
-
-  <div class="drop-zone" id="dropZone">
-    <input type="file" id="fileInput" accept=".pdf,.txt,.md,.csv,.log" />
-    <div class="icon">📄</div>
-    <p><strong>Click to browse</strong> or drag and drop</p>
-    <p style="margin-top:4px">PDF, TXT, MD, CSV, LOG</p>
+  <div class="card">
+    <h2>Mirror diagnostics</h2>
+    <div class="info-box">
+      Use this first to verify your Mirror credentials and runtime setup before querying documents.
+    </div>
+    <button id="diagnosticsBtn">Run diagnostics</button>
+    <div id="diagnosticsAlert" class="alert"></div>
+    <details>
+      <summary>Diagnostics output</summary>
+      <pre id="diagnosticsOutput">Not run yet.</pre>
+    </details>
   </div>
 
-  <div class="file-info" id="fileInfo">
-    <span>📎</span>
-    <span id="fileName">—</span>
+  <div class="card">
+    <h2>1. Upload a document</h2>
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept=".pdf,.txt,.md,.csv,.log,.text" />
+      <div style="font-size:2rem; margin-bottom:.5rem;">📄</div>
+      <p><strong>Click to upload</strong> or drag and drop a PDF/text document.</p>
+    </div>
+    <div class="file-info" id="fileInfo"></div>
+    <button id="uploadBtn" disabled>Upload document</button>
+    <div id="uploadAlert" class="alert"></div>
   </div>
 
-  <button id="uploadBtn" disabled>
-    <span class="spinner" id="uploadSpinner"></span>
-    <span id="uploadLabel">Upload document</span>
-  </button>
-
-  <div class="alert" id="uploadAlert"></div>
-</div>
-
-<!-- Step 2: Ask -->
-<div class="card">
-  <h2><span class="step-num">2</span> Ask a question</h2>
-
-  <textarea
-    id="questionInput"
-    placeholder="e.g. What are the key obligations in section 3?"
-    disabled
-  ></textarea>
-
-  <button id="queryBtn" disabled>
-    <span class="spinner" id="querySpinner"></span>
-    <span id="queryLabel">Ask Mirror ETF</span>
-  </button>
-
-  <div class="alert" id="queryAlert"></div>
-
-  <div class="answer-block" id="answerBlock">
-    <p style="font-size:0.8rem;font-weight:600;color:var(--muted);margin-bottom:.5rem;">ANSWER</p>
-    <div class="answer-text" id="answerText"></div>
-
-    <div class="receipt-block">
+  <div class="card">
+    <h2>2. Ask a question</h2>
+    <div class="grid">
+      <div>
+        <label for="runtimeSelect">Runtime lane</label>
+        <select id="runtimeSelect">
+          <option value="plain">plain</option>
+          <option value="protected">protected</option>
+          <option value="sealed">sealed</option>
+        </select>
+      </div>
+      <div>
+        <label for="modelSelect">Model</label>
+        <select id="modelSelect">
+          <option value="">Default (from MIRROR_DEFAULT_MODEL)</option>
+        </select>
+      </div>
+    </div>
+    <p class="muted" style="margin: .8rem 0 1rem;">If model loading fails, you can still use the configured default model.</p>
+    <label for="questionInput">Question</label>
+    <textarea id="questionInput" placeholder="Ask something about the uploaded document..."></textarea>
+    <button id="askBtn" disabled>Ask question</button>
+    <div id="queryAlert" class="alert"></div>
+    <div class="answer-block" id="answerBlock">
+      <div class="answer-text" id="answerText"></div>
       <details>
-        <summary>🧾 Mirror ETF signed run receipt</summary>
-        <pre id="receiptPre"></pre>
+        <summary>Mirror metadata</summary>
+        <pre id="metadataOutput"></pre>
       </details>
     </div>
   </div>
-</div>
-
-<footer>
-  Built to learn <a href="https://mirrorsecurity.io/etf" target="_blank">Mirror ETF</a> ·
-  <a href="/api/docs" target="_blank">API docs</a>
-</footer>
 
 <script>
-  const fileInput   = document.getElementById('fileInput');
-  const dropZone    = document.getElementById('dropZone');
-  const fileInfo    = document.getElementById('fileInfo');
-  const fileName    = document.getElementById('fileName');
-  const uploadBtn   = document.getElementById('uploadBtn');
+  const fileInput = document.getElementById('fileInput');
+  const dropZone = document.getElementById('dropZone');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const askBtn = document.getElementById('askBtn');
+  const diagnosticsBtn = document.getElementById('diagnosticsBtn');
+  const fileInfo = document.getElementById('fileInfo');
   const uploadAlert = document.getElementById('uploadAlert');
-  const uploadSpinner = document.getElementById('uploadSpinner');
-  const uploadLabel = document.getElementById('uploadLabel');
-
-  const questionInput = document.getElementById('questionInput');
-  const queryBtn    = document.getElementById('queryBtn');
-  const queryAlert  = document.getElementById('queryAlert');
-  const querySpinner = document.getElementById('querySpinner');
-  const queryLabel  = document.getElementById('queryLabel');
+  const queryAlert = document.getElementById('queryAlert');
+  const diagnosticsAlert = document.getElementById('diagnosticsAlert');
+  const diagnosticsOutput = document.getElementById('diagnosticsOutput');
   const answerBlock = document.getElementById('answerBlock');
-  const answerText  = document.getElementById('answerText');
-  const receiptPre  = document.getElementById('receiptPre');
+  const answerText = document.getElementById('answerText');
+  const metadataOutput = document.getElementById('metadataOutput');
+  const questionInput = document.getElementById('questionInput');
+  const modelSelect = document.getElementById('modelSelect');
+  const runtimeSelect = document.getElementById('runtimeSelect');
 
-  let docId = null;
   let selectedFile = null;
+  let currentDocId = null;
 
-  // --- File selection ---
-  fileInput.addEventListener('change', () => onFileSelected(fileInput.files[0]));
-
-  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-  dropZone.addEventListener('drop', e => {
-    e.preventDefault();
-    dropZone.classList.remove('drag-over');
-    if (e.dataTransfer.files[0]) onFileSelected(e.dataTransfer.files[0]);
-  });
-
-  function onFileSelected(file) {
-    if (!file) return;
-    selectedFile = file;
-    fileName.textContent = `${file.name}  (${(file.size / 1024).toFixed(1)} KB)`;
-    fileInfo.classList.add('show');
-    uploadBtn.disabled = false;
-    hideAlert(uploadAlert);
-  }
-
-  // --- Upload ---
-  uploadBtn.addEventListener('click', async () => {
-    if (!selectedFile) return;
-    setLoading(uploadBtn, uploadSpinner, uploadLabel, 'Uploading…', true);
-    hideAlert(uploadAlert);
-
-    const form = new FormData();
-    form.append('file', selectedFile);
-
-    try {
-      const res = await fetch('/api/upload', { method: 'POST', body: form });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
-
-      docId = data.doc_id;
-      showAlert(uploadAlert, `✅ "${data.filename}" uploaded — ${data.char_count.toLocaleString()} characters extracted.`, 'success');
-      questionInput.disabled = false;
-      queryBtn.disabled = false;
-      questionInput.focus();
-    } catch (err) {
-      showAlert(uploadAlert, `❌ Upload failed: ${err.message}`, 'error');
-    } finally {
-      setLoading(uploadBtn, uploadSpinner, uploadLabel, 'Upload document', false);
-    }
-  });
-
-  // --- Query ---
-  queryBtn.addEventListener('click', async () => {
-    const question = questionInput.value.trim();
-    if (!question) { showAlert(queryAlert, 'Please enter a question.', 'error'); return; }
-    if (!docId) { showAlert(queryAlert, 'Upload a document first.', 'error'); return; }
-
-    setLoading(queryBtn, querySpinner, queryLabel, 'Asking Mirror ETF…', true);
-    hideAlert(queryAlert);
-    answerBlock.classList.remove('show');
-
-    try {
-      const res = await fetch('/api/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ doc_id: docId, question }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
-
-      answerText.textContent = data.answer;
-      receiptPre.textContent = JSON.stringify(data.receipt, null, 2);
-      answerBlock.classList.add('show');
-    } catch (err) {
-      showAlert(queryAlert, `❌ Query failed: ${err.message}`, 'error');
-    } finally {
-      setLoading(queryBtn, querySpinner, queryLabel, 'Ask Mirror ETF', false);
-    }
-  });
-
-  // --- Helpers ---
-  function showAlert(el, msg, type) {
-    el.textContent = msg;
-    el.className = `alert ${type} show`;
+  function showAlert(el, type, message) {
+    el.className = `alert show ${type}`;
+    el.textContent = message;
   }
 
   function hideAlert(el) {
@@ -423,11 +176,131 @@
     el.textContent = '';
   }
 
-  function setLoading(btn, spinner, label, text, loading) {
-    btn.disabled = loading;
-    spinner.style.display = loading ? 'block' : 'none';
-    label.textContent = text;
+  function setFile(file) {
+    selectedFile = file;
+    uploadBtn.disabled = !file;
+    if (file) {
+      fileInfo.className = 'file-info show';
+      fileInfo.textContent = `Selected: ${file.name} (${Math.round(file.size / 1024)} KB)`;
+    } else {
+      fileInfo.className = 'file-info';
+      fileInfo.textContent = '';
+    }
   }
+
+  fileInput.addEventListener('change', (e) => setFile(e.target.files[0] || null));
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+  });
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+    });
+  });
+  dropZone.addEventListener('drop', (e) => setFile(e.dataTransfer.files[0] || null));
+
+  diagnosticsBtn.addEventListener('click', async () => {
+    hideAlert(diagnosticsAlert);
+    diagnosticsBtn.disabled = true;
+    diagnosticsBtn.textContent = 'Running diagnostics...';
+    try {
+      const res = await fetch('/api/mirror/diagnostics');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Diagnostics failed');
+      diagnosticsOutput.textContent = JSON.stringify(data.details, null, 2);
+      showAlert(diagnosticsAlert, 'success', 'Mirror diagnostics completed successfully.');
+    } catch (err) {
+      diagnosticsOutput.textContent = String(err.message || err);
+      showAlert(diagnosticsAlert, 'error', String(err.message || err));
+    } finally {
+      diagnosticsBtn.disabled = false;
+      diagnosticsBtn.textContent = 'Run diagnostics';
+    }
+  });
+
+  async function loadModels() {
+    try {
+      const res = await fetch('/api/mirror/models');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Could not load models');
+      for (const model of data) {
+        const option = document.createElement('option');
+        option.value = model.id;
+        option.textContent = model.provider ? `${model.id} (${model.provider})` : model.id;
+        modelSelect.appendChild(option);
+      }
+    } catch (_) {
+      // Non-fatal. Keep default-only option.
+    }
+  }
+  loadModels();
+
+  uploadBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+    hideAlert(uploadAlert);
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Uploading...';
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Upload failed');
+      currentDocId = data.doc_id;
+      askBtn.disabled = false;
+      showAlert(uploadAlert, 'success', `Uploaded ${data.filename}. Document ID: ${data.doc_id}`);
+    } catch (err) {
+      showAlert(uploadAlert, 'error', String(err.message || err));
+    } finally {
+      uploadBtn.disabled = false;
+      uploadBtn.textContent = 'Upload document';
+    }
+  });
+
+  askBtn.addEventListener('click', async () => {
+    const question = questionInput.value.trim();
+    if (!currentDocId || !question) return;
+    hideAlert(queryAlert);
+    answerBlock.className = 'answer-block';
+    askBtn.disabled = true;
+    askBtn.textContent = 'Asking...';
+    try {
+      const payload = {
+        doc_id: currentDocId,
+        question,
+        runtime: runtimeSelect.value,
+      };
+      if (modelSelect.value) payload.model = modelSelect.value;
+
+      const res = await fetch('/api/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Query failed');
+
+      answerText.textContent = data.answer;
+      metadataOutput.textContent = JSON.stringify({
+        model: data.model,
+        runtime: data.runtime,
+        protection: data.protection,
+        mirror_report: data.mirror_report,
+        service_timing: data.service_timing,
+      }, null, 2);
+      answerBlock.className = 'answer-block show';
+      showAlert(queryAlert, 'success', 'Answer generated successfully.');
+    } catch (err) {
+      showAlert(queryAlert, 'error', String(err.message || err));
+    } finally {
+      askBtn.disabled = false;
+      askBtn.textContent = 'Ask question';
+    }
+  });
 </script>
 </body>
 </html>

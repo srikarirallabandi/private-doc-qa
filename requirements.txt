@@ -1,10 +1,10 @@
 fastapi==0.115.6
 uvicorn[standard]==0.32.1
 python-multipart==0.0.20
-openai==1.59.3
 pypdf==5.1.0
 python-dotenv==1.0.1
 httpx==0.28.1
 pytest==8.3.4
 pytest-asyncio==0.24.0
-httpx==0.28.1
+# Install the Mirror SDK from your local bundle, for example:
+# pip install --find-links=/path/to/mirror-sdk mirror-sdk

@@ -1,11 +1,10 @@
 """Pydantic models for request and response bodies."""
 
+from typing import Any, Literal
 from pydantic import BaseModel, Field
-from typing import Any
 
 
 class UploadResponse(BaseModel):
-    """Returned after a successful document upload."""
     doc_id: str = Field(..., description="Unique ID for the uploaded document. Pass this to /query.")
     filename: str = Field(..., description="Original filename.")
     char_count: int = Field(..., description="Number of characters extracted from the document.")
@@ -13,28 +12,52 @@ class UploadResponse(BaseModel):
 
 
 class QueryRequest(BaseModel):
-    """Body for POST /query."""
     doc_id: str = Field(..., description="The doc_id returned by /upload.")
     question: str = Field(..., min_length=1, description="The question to ask about the document.")
+    model: str | None = Field(default=None, description="Optional Mirror model override.")
+    runtime: Literal["plain", "protected", "sealed"] = Field(
+        default="plain",
+        description="Mirror runtime lane to use for the question.",
+    )
 
 
-class RunReceipt(BaseModel):
-    """Signed run receipt returned by Mirror ETF on each inference call.
+class MirrorDiagnosticsResponse(BaseModel):
+    ok: bool
+    summary: str
+    details: dict[str, Any]
 
-    Mirror ETF attaches a signed attestation to every inference call so you have
-    a tamper-evident record of what the model processed. Fields here reflect the
-    extra fields Mirror ETF adds on top of the standard OpenAI response.
-    """
-    receipt_id: str | None = Field(None, description="Mirror ETF receipt identifier.")
-    signed_at: str | None = Field(None, description="ISO 8601 timestamp when the receipt was signed.")
-    model: str | None = Field(None, description="Model that produced the response.")
-    encryption_lane: str | None = Field(None, description="Encryption lane used (plain / e2e / fhe / local).")
-    raw: dict[str, Any] = Field(default_factory=dict, description="Full raw receipt fields from Mirror ETF.")
+
+class MirrorModelInfo(BaseModel):
+    id: str
+    provider: str | None = None
+    surface: str | None = None
+
+
+class ProtectionInfo(BaseModel):
+    profile: str | None = None
+    contract: str | None = None
+    contract_satisfied: bool | None = None
+    compute_mode: str | None = None
+    all_stages_encrypted: bool | None = None
+    raw: dict[str, Any] = Field(default_factory=dict)
+
+
+class MirrorReportInfo(BaseModel):
+    session_id: str | None = None
+    family: str | None = None
+    execution_kind: str | None = None
+    runtime_mode: str | None = None
+    decode_mode: str | None = None
+    receipt_mode: str | None = None
+    raw: dict[str, Any] = Field(default_factory=dict)
 
 
 class QueryResponse(BaseModel):
-    """Response from POST /query."""
     answer: str = Field(..., description="The model's answer to the question.")
     doc_id: str = Field(..., description="The document that was queried.")
     question: str = Field(..., description="The original question.")
-    receipt: RunReceipt = Field(..., description="Mirror ETF signed run receipt.")
+    model: str = Field(..., description="The model used for the answer.")
+    runtime: str = Field(..., description="The Mirror runtime lane used.")
+    protection: ProtectionInfo | None = Field(default=None, description="Protected-lane metadata if available.")
+    mirror_report: MirrorReportInfo | None = Field(default=None, description="Mirror attestation/report fields if available.")
+    service_timing: dict[str, Any] = Field(default_factory=dict, description="Timing metadata returned by Mirror.")
